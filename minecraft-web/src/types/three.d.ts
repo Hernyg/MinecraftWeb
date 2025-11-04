@@ -26,6 +26,7 @@ declare module "three" {
     remove(...objects: Object3D[]): this;
     userData: Record<string, unknown>;
     visible: boolean;
+    frustumCulled: boolean;
   }
 
   export class Scene extends Object3D {
@@ -52,10 +53,12 @@ declare module "three" {
     constructor(array: Float32Array | Uint32Array, itemSize: number);
   }
 
-  export class Material {}
+  export class Material {
+    depthWrite: boolean;
+  }
 
   export class MeshStandardMaterial extends Material {
-    constructor(parameters?: { map?: Texture; side?: number });
+    constructor(parameters?: { map?: Texture; side?: number; vertexColors?: boolean });
   }
 
   export class MeshBasicMaterial extends Material {
@@ -95,6 +98,8 @@ declare module "three" {
     magFilter: number;
     minFilter: number;
     generateMipmaps: boolean;
+    wrapS: number;
+    wrapT: number;
   }
 
   export class TextureLoader {
@@ -103,4 +108,21 @@ declare module "three" {
 
   export const DoubleSide: number;
   export const NearestFilter: number;
+  export const ClampToEdgeWrapping: number;
+
+  export class EdgesGeometry extends BufferGeometry {
+    constructor(geometry?: BufferGeometry);
+  }
+
+  export class LineBasicMaterial extends Material {
+    constructor(parameters?: { color?: number | string; depthTest?: boolean; depthWrite?: boolean });
+  }
+
+  export class LineSegments<
+    TGeometry extends BufferGeometry = BufferGeometry,
+    TMaterial extends Material = Material,
+  > extends Object3D {
+    constructor(geometry?: TGeometry, material?: TMaterial);
+    renderOrder: number;
+  }
 }

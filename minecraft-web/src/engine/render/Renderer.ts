@@ -3,34 +3,42 @@ import {
   BoxGeometry,
   Color,
   DirectionalLight,
+  EdgesGeometry,
   Group,
+  LineBasicMaterial,
+  LineSegments,
   Mesh,
-  MeshBasicMaterial,
   PerspectiveCamera,
   Scene,
   WebGLRenderer,
 } from "three";
 import type { World } from "../world/World";
 import type { PlayerState } from "../input/Controls";
-import type { RaycastHit } from "../physics/Raycast";
+interface HighlightTarget {
+  x: number;
+  y: number;
+  z: number;
+}
 
 class VoxelHighlighter {
-  private readonly mesh: Mesh;
+  private readonly mesh: LineSegments;
 
   constructor() {
-    const geometry = new BoxGeometry(1.01, 1.01, 1.01);
-    const material = new MeshBasicMaterial({ color: 0xffffff, wireframe: true, depthTest: false });
-    this.mesh = new Mesh(geometry, material);
+    const geometry = new EdgesGeometry(new BoxGeometry(1.002, 1.002, 1.002));
+    const material = new LineBasicMaterial({ color: 0xffffff, depthTest: false, depthWrite: false });
+    this.mesh = new LineSegments(geometry, material);
+    this.mesh.frustumCulled = false;
+    this.mesh.renderOrder = 10;
     this.mesh.visible = false;
   }
 
-  get object(): Mesh {
+  get object(): LineSegments {
     return this.mesh;
   }
 
   show(x: number, y: number, z: number): void {
     this.mesh.visible = true;
-    this.mesh.position.set(x + 0.5, y + 0.5, z + 0.5);
+    this.mesh.position.set(Math.floor(x) + 0.5, Math.floor(y) + 0.5, Math.floor(z) + 0.5);
   }
 
   hide(): void {
@@ -86,12 +94,12 @@ export class Renderer {
     this.chunkRoot.remove(mesh);
   }
 
-  setHighlight(hit: RaycastHit | null): void {
-    if (hit && hit.hit) {
-      this.highlighter.show(hit.wx, hit.wy, hit.wz);
-    } else {
+  setHighlight(target: HighlightTarget | null): void {
+    if (!target) {
       this.highlighter.hide();
+      return;
     }
+    this.highlighter.show(target.x, target.y, target.z);
   }
 
   renderFrame(world: World, player: PlayerState, now: number): void {

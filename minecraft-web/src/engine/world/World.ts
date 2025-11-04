@@ -28,6 +28,7 @@ const neighborOffsets: Record<Exclude<FaceKey, "py" | "ny">, [number, number]> =
 
 export class World {
   private readonly chunks = new Map<string, ChunkState>();
+  private readonly persistedEdits = new Map<string, Map<number, number>>();
 
   constructor(private readonly renderer: Renderer) {}
 
@@ -45,8 +46,13 @@ export class World {
   }
 
   private async populateChunk(state: ChunkState): Promise<void> {
+    const key = chunkKey(state.chunk.cx, state.chunk.cz);
     const data = await generateChunk(state.chunk.cx, state.chunk.cz);
-    state.chunk.blocks.set(data);
+    state.chunk.loadBase(data);
+    const edits = this.persistedEdits.get(key);
+    if (edits) {
+      state.chunk.applyEdits(edits);
+    }
     state.state = "meshing";
     await this.remeshChunk(state);
   }
@@ -113,6 +119,7 @@ export class World {
           this.renderer.removeChunkMesh(key, state.mesh);
           state.mesh.geometry.dispose();
         }
+        this.persistChunkEdits(key, state.chunk);
         this.chunks.delete(key);
       }
     }
@@ -138,8 +145,10 @@ export class World {
       return;
     }
     const { chunk, local } = voxelToLocal(Math.floor(wx), Math.floor(wy), Math.floor(wz));
+    const key = chunkKey(chunk.x, chunk.z);
     const state = this.getOrCreateChunk(chunk.x, chunk.z);
     state.chunk.set(local.x, local.y, local.z, id);
+    this.persistChunkEdits(key, state.chunk);
     this.scheduleRemesh(state);
     if (local.x === 0) this.remeshNeighbor(chunk.x - 1, chunk.z);
     if (local.x === CHUNK.X - 1) this.remeshNeighbor(chunk.x + 1, chunk.z);
@@ -166,5 +175,13 @@ export class World {
 
   raycastBlock(origin: Vec3, direction: Vec3, maxDist = RAYCAST_MAX) {
     return voxelRaycast(origin, direction, maxDist, (x, y, z) => this.getBlock(x, y, z));
+  }
+
+  private persistChunkEdits(key: string, chunk: Chunk): void {
+    if (chunk.edits.size > 0) {
+      this.persistedEdits.set(key, chunk.snapshotEdits());
+    } else {
+      this.persistedEdits.delete(key);
+    }
   }
 }

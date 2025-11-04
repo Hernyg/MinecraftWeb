@@ -17,6 +17,20 @@ export class Chunk {
     this.blocks = data ? new Uint16Array(data) : new Uint16Array(SIZE);
   }
 
+  loadBase(data: Uint16Array): void {
+    this.blocks.set(data);
+    this.edits.clear();
+    this.edited = false;
+  }
+
+  applyEdits(edits: Map<number, number>): void {
+    this.edits.clear();
+    for (const [idx, value] of edits) {
+      this.edits.set(idx, value);
+    }
+    this.edited = this.edits.size > 0;
+  }
+
   private index(x: number, y: number, z: number): number {
     return indexOf(x, y, z);
   }
@@ -48,6 +62,10 @@ export class Chunk {
       merged[idx] = value;
     }
     return merged;
+  }
+
+  snapshotEdits(): Map<number, number> {
+    return new Map(this.edits);
   }
 }
 

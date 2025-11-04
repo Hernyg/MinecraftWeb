@@ -4,7 +4,7 @@ import { PointerLock } from "./engine/input/PointerLock";
 import { Controls, type PlayerState } from "./engine/input/Controls";
 import { createVec3, setVec3, normalizeVec3 } from "./engine/utils/Vec3";
 import { initHUD } from "./ui/hud";
-import { RAYCAST_MAX } from "./data/config";
+import { CHUNK, RAYCAST_MAX } from "./data/config";
 
 const canvas = document.getElementById("game") as HTMLCanvasElement | null;
 if (!canvas) {
@@ -43,8 +43,30 @@ const loop = (time: number) => {
   normalizeVec3(rayDirection);
 
   const hit = world.raycastBlock(player.position, rayDirection, RAYCAST_MAX);
-  renderer.setHighlight(hit.hit ? hit : null);
-  hud.setTargetBlock(hit.hit ? world.getBlock(hit.wx, hit.wy, hit.wz) : null);
+  const placeHeld = controls.isPlaceHeld();
+  let highlightTarget: { x: number; y: number; z: number } | null = null;
+
+  if (hit.hit) {
+    const blockId = world.getBlock(hit.wx, hit.wy, hit.wz);
+    hud.setTargetBlock(blockId);
+
+    if (placeHeld) {
+      const targetX = hit.wx + hit.face[0];
+      const targetY = hit.wy + hit.face[1];
+      const targetZ = hit.wz + hit.face[2];
+      if (targetY >= 0 && targetY < CHUNK.Y && world.getBlock(targetX, targetY, targetZ) === 0) {
+        highlightTarget = { x: targetX, y: targetY, z: targetZ };
+      } else {
+        highlightTarget = { x: hit.wx, y: hit.wy, z: hit.wz };
+      }
+    } else {
+      highlightTarget = { x: hit.wx, y: hit.wy, z: hit.wz };
+    }
+  } else {
+    hud.setTargetBlock(null);
+  }
+
+  renderer.setHighlight(highlightTarget);
 
   if (hit.hit && controls.consumeBreakRequest()) {
     world.setBlock(hit.wx, hit.wy, hit.wz, 0);
@@ -54,7 +76,7 @@ const loop = (time: number) => {
     const targetX = hit.wx + hit.face[0];
     const targetY = hit.wy + hit.face[1];
     const targetZ = hit.wz + hit.face[2];
-    if (world.getBlock(targetX, targetY, targetZ) === 0) {
+    if (targetY >= 0 && targetY < CHUNK.Y && world.getBlock(targetX, targetY, targetZ) === 0) {
       world.setBlock(targetX, targetY, targetZ, controls.getSelectedBlock());
     }
   }
