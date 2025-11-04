@@ -1,0 +1,20 @@
+{
+  "name": "minecraft-web",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.170.0",
+    "zod": "^3.23.8",
+    "comlink": "^4.4.1",
+    "idb": "^8.0.0",
+    "open-simplex-noise": "^2.5.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vite": "^5.4.0"
+  }
+}
