@@ -12,34 +12,39 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 20px;
-  height: 20px;
-  margin-left: -10px;
-  margin-top: -10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.hud-crosshair::before,
-.hud-crosshair::after {
-  content: "";
-  position: absolute;
-  background: rgba(255, 255, 255, 0.8);
-}
-
-.hud-crosshair::before {
-  width: 2px;
-  height: 12px;
-}
-
-.hud-crosshair::after {
-  width: 12px;
-  height: 2px;
+  transform: translate(-50%, -50%);
+  font-size: 18px;
+  user-select: none;
 }
 
 .hud-stats {
   position: absolute;
-  top: 10px;
-  left: 10px;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hud-hotbar {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+}
+
+.hud-hotbar-slot {
+  padding: 4px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  min-width: 28px;
+  text-align: center;
+  border-radius: 2px;
+  opacity: 0.6;
+}
+
+.hud-hotbar-slot.active {
+  border-color: #fff;
+  opacity: 1;
 }

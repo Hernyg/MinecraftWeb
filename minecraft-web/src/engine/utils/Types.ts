@@ -1,10 +1,6 @@
 export type FaceKey = "px" | "nx" | "py" | "ny" | "pz" | "nz";
 
-export interface ChunkDimensions {
-  x: number;
-  y: number;
-  z: number;
-}
+export type ChunkDims = readonly [number, number, number];
 
 export interface MeshResult {
   positions: Float32Array;
