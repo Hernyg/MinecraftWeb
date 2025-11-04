@@ -1,4 +1,10 @@
-import { MeshStandardMaterial, NearestFilter, Texture, TextureLoader } from "three";
+import {
+  ClampToEdgeWrapping,
+  MeshStandardMaterial,
+  NearestFilter,
+  Texture,
+  TextureLoader,
+} from "three";
 
 let atlasTexturePromise: Promise<Texture> | null = null;
 let atlasMaterialPromise: Promise<MeshStandardMaterial> | null = null;
@@ -9,6 +15,8 @@ const loadAtlasTexture = async (): Promise<Texture> => {
     atlasTexturePromise = loader.loadAsync("/textures/atlas.png").then((texture) => {
       texture.magFilter = NearestFilter;
       texture.minFilter = NearestFilter;
+      texture.wrapS = ClampToEdgeWrapping;
+      texture.wrapT = ClampToEdgeWrapping;
       texture.generateMipmaps = false;
       return texture;
     });
@@ -18,7 +26,13 @@ const loadAtlasTexture = async (): Promise<Texture> => {
 
 export const getAtlasMaterial = async (): Promise<MeshStandardMaterial> => {
   if (!atlasMaterialPromise) {
-    atlasMaterialPromise = loadAtlasTexture().then((texture) => new MeshStandardMaterial({ map: texture }));
+    atlasMaterialPromise = loadAtlasTexture().then(
+      (texture) =>
+        new MeshStandardMaterial({
+          map: texture,
+          vertexColors: false,
+        }),
+    );
   }
   return atlasMaterialPromise;
 };

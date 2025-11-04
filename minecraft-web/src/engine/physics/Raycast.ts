@@ -11,7 +11,7 @@ export interface RaycastHit {
 
 type Sampler = (x: number, y: number, z: number) => number;
 
-const EPSILON = 1e-6;
+const EPSILON = 1e-8;
 
 export const voxelRaycast = (
   origin: Vec3,
@@ -19,33 +19,34 @@ export const voxelRaycast = (
   maxDist: number = RAYCAST_MAX,
   sample: Sampler,
 ): RaycastHit => {
-  const dirX = direction.x;
-  const dirY = direction.y;
-  const dirZ = direction.z;
-
-  const stepX = dirX > EPSILON ? 1 : dirX < -EPSILON ? -1 : 0;
-  const stepY = dirY > EPSILON ? 1 : dirY < -EPSILON ? -1 : 0;
-  const stepZ = dirZ > EPSILON ? 1 : dirZ < -EPSILON ? -1 : 0;
-
-  const invDx = stepX !== 0 ? Math.abs(1 / dirX) : Number.POSITIVE_INFINITY;
-  const invDy = stepY !== 0 ? Math.abs(1 / dirY) : Number.POSITIVE_INFINITY;
-  const invDz = stepZ !== 0 ? Math.abs(1 / dirZ) : Number.POSITIVE_INFINITY;
+  const dirLengthSq = direction.x * direction.x + direction.y * direction.y + direction.z * direction.z;
+  if (dirLengthSq < EPSILON) {
+    return { hit: false, wx: 0, wy: 0, wz: 0, face: [0, 0, 0] };
+  }
 
   let x = Math.floor(origin.x);
   let y = Math.floor(origin.y);
   let z = Math.floor(origin.z);
 
-  const boundaryX = stepX > 0 ? x + 1 : x;
-  const boundaryY = stepY > 0 ? y + 1 : y;
-  const boundaryZ = stepZ > 0 ? z + 1 : z;
+  const stepX = direction.x > 0 ? 1 : direction.x < 0 ? -1 : 0;
+  const stepY = direction.y > 0 ? 1 : direction.y < 0 ? -1 : 0;
+  const stepZ = direction.z > 0 ? 1 : direction.z < 0 ? -1 : 0;
 
-  let tMaxX = stepX !== 0 ? (boundaryX - origin.x) * invDx : Number.POSITIVE_INFINITY;
-  let tMaxY = stepY !== 0 ? (boundaryY - origin.y) * invDy : Number.POSITIVE_INFINITY;
-  let tMaxZ = stepZ !== 0 ? (boundaryZ - origin.z) * invDz : Number.POSITIVE_INFINITY;
+  const invDx = stepX !== 0 ? 1 / direction.x : Infinity;
+  const invDy = stepY !== 0 ? 1 / direction.y : Infinity;
+  const invDz = stepZ !== 0 ? 1 / direction.z : Infinity;
 
-  if (tMaxX < 0) tMaxX = 0;
-  if (tMaxY < 0) tMaxY = 0;
-  if (tMaxZ < 0) tMaxZ = 0;
+  const nextBoundaryX = stepX > 0 ? x + 1 : x;
+  const nextBoundaryY = stepY > 0 ? y + 1 : y;
+  const nextBoundaryZ = stepZ > 0 ? z + 1 : z;
+
+  let tMaxX = stepX !== 0 ? (nextBoundaryX - origin.x) * invDx : Infinity;
+  let tMaxY = stepY !== 0 ? (nextBoundaryY - origin.y) * invDy : Infinity;
+  let tMaxZ = stepZ !== 0 ? (nextBoundaryZ - origin.z) * invDz : Infinity;
+
+  const tDeltaX = Math.abs(invDx);
+  const tDeltaY = Math.abs(invDy);
+  const tDeltaZ = Math.abs(invDz);
 
   let distance = 0;
   let lastFace: [number, number, number] = [0, 0, 0];
@@ -58,32 +59,40 @@ export const voxelRaycast = (
 
     if (tMaxX < tMaxY) {
       if (tMaxX < tMaxZ) {
+        if (!Number.isFinite(tMaxX)) {
+          break;
+        }
         x += stepX;
         distance = tMaxX;
-        tMaxX += invDx;
+        tMaxX += tDeltaX;
         lastFace = [-stepX, 0, 0];
       } else {
+        if (!Number.isFinite(tMaxZ)) {
+          break;
+        }
         z += stepZ;
         distance = tMaxZ;
-        tMaxZ += invDz;
+        tMaxZ += tDeltaZ;
         lastFace = [0, 0, -stepZ];
       }
     } else {
       if (tMaxY < tMaxZ) {
+        if (!Number.isFinite(tMaxY)) {
+          break;
+        }
         y += stepY;
         distance = tMaxY;
-        tMaxY += invDy;
+        tMaxY += tDeltaY;
         lastFace = [0, -stepY, 0];
       } else {
+        if (!Number.isFinite(tMaxZ)) {
+          break;
+        }
         z += stepZ;
         distance = tMaxZ;
-        tMaxZ += invDz;
+        tMaxZ += tDeltaZ;
         lastFace = [0, 0, -stepZ];
       }
-    }
-
-    if (stepX === 0 && stepY === 0 && stepZ === 0) {
-      break;
     }
   }
 

@@ -1,11 +1,11 @@
-export interface BlockFaceTextures {
-  px: string;
-  nx: string;
-  py: string;
-  ny: string;
-  pz: string;
-  nz: string;
-}
+import type { FaceKey } from "../engine/utils/Types";
+import {
+  BLOCK_REGISTRY,
+  type BlockDef as WorldBlockDef,
+  placeableIds as worldPlaceableIds,
+} from "../engine/world/Block";
+
+export type BlockFaceTextures = Record<FaceKey, string>;
 
 export interface BlockDef {
   id: number;
@@ -14,46 +14,17 @@ export interface BlockDef {
   textures: BlockFaceTextures;
 }
 
-const makeFaces = (top: string, bottom: string, side: string): BlockFaceTextures => ({
-  px: side,
-  nx: side,
-  py: top,
-  ny: bottom,
-  pz: side,
-  nz: side,
+const convertBlock = (block: WorldBlockDef): BlockDef => ({
+  id: block.id,
+  name: block.name,
+  opaque: block.opaque,
+  textures: block.faces,
 });
 
-const registry: BlockDef[] = [
-  {
-    id: 0,
-    name: "air",
-    opaque: false,
-    textures: makeFaces("air", "air", "air"),
-  },
-  {
-    id: 1,
-    name: "grass",
-    opaque: true,
-    textures: makeFaces("grass_top", "dirt", "grass_side"),
-  },
-  {
-    id: 2,
-    name: "dirt",
-    opaque: true,
-    textures: makeFaces("dirt", "dirt", "dirt"),
-  },
-  {
-    id: 3,
-    name: "stone",
-    opaque: true,
-    textures: makeFaces("stone", "stone", "stone"),
-  },
-];
+export const Blocks: BlockDef[] = Array.from(BLOCK_REGISTRY.values()).map(convertBlock);
 
-export const Blocks = registry;
-
-export const BlockById = new Map<number, BlockDef>(registry.map((block) => [block.id, block]));
+export const BlockById = new Map<number, BlockDef>(Blocks.map((block) => [block.id, block]));
 
 export const isOpaque = (id: number): boolean => BlockById.get(id)?.opaque ?? false;
 
-export const placeableIds: number[] = [1, 2, 3];
+export const placeableIds: number[] = [...worldPlaceableIds];

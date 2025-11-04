@@ -25,24 +25,30 @@ export class Controls {
   private readonly right = createVec3();
   private readonly direction = createVec3();
   private readonly removeMoveHandler: () => void;
+  private readonly removeLockHandler: () => void;
   private breakRequested = false;
   private placeRequested = false;
   private selectedIndex = 0;
+  private placeHeld = false;
 
   constructor(private readonly pointerLock: PointerLock, private readonly state: PlayerState) {
     window.addEventListener("keydown", this.handleKeyDown);
     window.addEventListener("keyup", this.handleKeyUp);
     document.addEventListener("mousedown", this.handleMouseDown);
+    document.addEventListener("mouseup", this.handleMouseUp);
     document.addEventListener("contextmenu", this.handleContextMenu);
     this.removeMoveHandler = this.pointerLock.onMove(this.handleLook);
+    this.removeLockHandler = this.pointerLock.onChange(this.handleLockChange);
   }
 
   dispose(): void {
     window.removeEventListener("keydown", this.handleKeyDown);
     window.removeEventListener("keyup", this.handleKeyUp);
     document.removeEventListener("mousedown", this.handleMouseDown);
+    document.removeEventListener("mouseup", this.handleMouseUp);
     document.removeEventListener("contextmenu", this.handleContextMenu);
     this.removeMoveHandler();
+    this.removeLockHandler();
   }
 
   update(delta: number): void {
@@ -106,6 +112,10 @@ export class Controls {
     return placeableIds[this.selectedIndex] ?? placeableIds[0];
   }
 
+  isPlaceHeld(): boolean {
+    return this.placeHeld;
+  }
+
   private readonly handleKeyDown = (event: KeyboardEvent) => {
     if (event.code.startsWith("Digit")) {
       const slot = Number.parseInt(event.code.slice(5), 10) - 1;
@@ -128,6 +138,19 @@ export class Controls {
       this.breakRequested = true;
     } else if (event.button === 2) {
       this.placeRequested = true;
+      this.placeHeld = true;
+    }
+  };
+
+  private readonly handleMouseUp = (event: MouseEvent) => {
+    if (event.button === 2) {
+      this.placeHeld = false;
+    }
+  };
+
+  private readonly handleLockChange = (locked: boolean) => {
+    if (!locked) {
+      this.placeHeld = false;
     }
   };
 
