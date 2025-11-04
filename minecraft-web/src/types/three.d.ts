@@ -23,11 +23,16 @@ declare module "three" {
     position: Vector3;
     rotation: Euler;
     add(...objects: Object3D[]): this;
+    remove(...objects: Object3D[]): this;
+    userData: Record<string, unknown>;
+    visible: boolean;
   }
 
   export class Scene extends Object3D {
     background: Color | null;
   }
+
+  export class Group extends Object3D {}
 
   export class Camera extends Object3D {}
 
@@ -53,9 +58,14 @@ declare module "three" {
     constructor(parameters?: { map?: Texture; side?: number });
   }
 
+  export class MeshBasicMaterial extends Material {
+    constructor(parameters?: { color?: number | string; wireframe?: boolean; depthTest?: boolean });
+  }
+
   export class Mesh<TGeometry extends BufferGeometry = BufferGeometry, TMaterial extends Material = Material> extends Object3D {
     constructor(geometry?: TGeometry, material?: TMaterial);
     geometry: TGeometry;
+    material: TMaterial;
   }
 
   export class BoxGeometry extends BufferGeometry {

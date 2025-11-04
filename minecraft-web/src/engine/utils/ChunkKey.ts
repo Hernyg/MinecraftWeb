@@ -5,6 +5,8 @@ export interface ChunkCoords {
   z: number;
 }
 
+const mod = (n: number, size: number): number => ((n % size) + size) % size;
+
 export const chunkKey = (x: number, z: number): string => `${x},${z}`;
 
 export const parseChunkKey = (key: string): ChunkCoords => {
@@ -18,8 +20,12 @@ export const worldToChunk = (x: number, z: number): ChunkCoords => {
   return { x: cx, z: cz };
 };
 
-export const localBlockCoords = (x: number, y: number, z: number) => ({
-  x: ((x % CHUNK.X) + CHUNK.X) % CHUNK.X,
-  y,
-  z: ((z % CHUNK.Z) + CHUNK.Z) % CHUNK.Z,
-});
+export const voxelToLocal = (wx: number, wy: number, wz: number) => {
+  const chunk = worldToChunk(wx, wz);
+  const local = {
+    x: mod(wx, CHUNK.X),
+    y: wy,
+    z: mod(wz, CHUNK.Z),
+  };
+  return { chunk, local };
+};

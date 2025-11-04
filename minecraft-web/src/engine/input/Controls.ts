@@ -7,6 +7,7 @@ import {
   type Vec3,
 } from "../utils/Vec3";
 import { PointerLock } from "./PointerLock";
+import { placeableIds } from "../../data/blocks";
 
 export interface PlayerState {
   position: Vec3;
@@ -17,23 +18,30 @@ export interface PlayerState {
 
 export class Controls {
   private readonly keys = new Set<string>();
-  private readonly lookSensitivity = 0.002;
-  private readonly speed = 8;
+  private readonly lookSensitivity = 0.0025;
+  private readonly speed = 10;
   private readonly moveVector = createVec3();
   private readonly forward = createVec3();
   private readonly right = createVec3();
   private readonly direction = createVec3();
   private readonly removeMoveHandler: () => void;
+  private breakRequested = false;
+  private placeRequested = false;
+  private selectedIndex = 0;
 
   constructor(private readonly pointerLock: PointerLock, private readonly state: PlayerState) {
     window.addEventListener("keydown", this.handleKeyDown);
     window.addEventListener("keyup", this.handleKeyUp);
+    document.addEventListener("mousedown", this.handleMouseDown);
+    document.addEventListener("contextmenu", this.handleContextMenu);
     this.removeMoveHandler = this.pointerLock.onMove(this.handleLook);
   }
 
   dispose(): void {
     window.removeEventListener("keydown", this.handleKeyDown);
     window.removeEventListener("keyup", this.handleKeyUp);
+    document.removeEventListener("mousedown", this.handleMouseDown);
+    document.removeEventListener("contextmenu", this.handleContextMenu);
     this.removeMoveHandler();
   }
 
@@ -78,12 +86,55 @@ export class Controls {
     return this.state;
   }
 
+  consumeBreakRequest(): boolean {
+    if (this.breakRequested) {
+      this.breakRequested = false;
+      return true;
+    }
+    return false;
+  }
+
+  consumePlaceRequest(): boolean {
+    if (this.placeRequested) {
+      this.placeRequested = false;
+      return true;
+    }
+    return false;
+  }
+
+  getSelectedBlock(): number {
+    return placeableIds[this.selectedIndex] ?? placeableIds[0];
+  }
+
   private readonly handleKeyDown = (event: KeyboardEvent) => {
+    if (event.code.startsWith("Digit")) {
+      const slot = Number.parseInt(event.code.slice(5), 10) - 1;
+      if (!Number.isNaN(slot) && slot >= 0 && slot < placeableIds.length) {
+        this.selectedIndex = slot;
+      }
+    }
     this.keys.add(event.code);
   };
 
   private readonly handleKeyUp = (event: KeyboardEvent) => {
     this.keys.delete(event.code);
+  };
+
+  private readonly handleMouseDown = (event: MouseEvent) => {
+    if (!this.pointerLock.isLocked()) {
+      return;
+    }
+    if (event.button === 0) {
+      this.breakRequested = true;
+    } else if (event.button === 2) {
+      this.placeRequested = true;
+    }
+  };
+
+  private readonly handleContextMenu = (event: MouseEvent) => {
+    if (this.pointerLock.isLocked()) {
+      event.preventDefault();
+    }
   };
 
   private readonly handleLook = (dx: number, dy: number) => {

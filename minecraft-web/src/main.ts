@@ -1,11 +1,10 @@
-import { BoxGeometry, DoubleSide, Mesh, MeshStandardMaterial, PlaneGeometry } from "three";
 import { Renderer } from "./engine/render/Renderer";
-import { getAtlas } from "./engine/render/Materials";
 import { World } from "./engine/world/World";
 import { PointerLock } from "./engine/input/PointerLock";
 import { Controls, type PlayerState } from "./engine/input/Controls";
-import { createVec3 } from "./engine/utils/Vec3";
+import { createVec3, setVec3, normalizeVec3 } from "./engine/utils/Vec3";
 import { initHUD } from "./ui/hud";
+import { RAYCAST_MAX } from "./data/config";
 
 const canvas = document.getElementById("game") as HTMLCanvasElement | null;
 if (!canvas) {
@@ -13,11 +12,11 @@ if (!canvas) {
 }
 
 const renderer = new Renderer(canvas);
-const world = new World();
+const world = new World(renderer);
 const pointerLock = new PointerLock(canvas);
 
 const player: PlayerState = {
-  position: createVec3(0, 70, 10),
+  position: createVec3(0, 80, 0),
   velocity: createVec3(),
   yaw: Math.PI,
   pitch: 0,
@@ -26,22 +25,10 @@ const player: PlayerState = {
 const controls = new Controls(pointerLock, player);
 const hud = initHUD();
 
-let cube: Mesh | null = null;
+let lastSelected = controls.getSelectedBlock();
+hud.setSelectedBlock(lastSelected);
 
-getAtlas().then((atlas) => {
-  const material = new MeshStandardMaterial({ map: atlas });
-  cube = new Mesh(new BoxGeometry(2, 2, 2), material);
-  cube.position.set(0, 65, 0);
-  renderer.scene.add(cube);
-
-  const ground = new Mesh(
-    new PlaneGeometry(32, 32),
-    new MeshStandardMaterial({ map: atlas, side: DoubleSide }),
-  );
-  ground.rotation.x = -Math.PI / 2;
-  ground.position.y = 64;
-  renderer.scene.add(ground);
-});
+const rayDirection = createVec3();
 
 let last = performance.now();
 
@@ -51,13 +38,35 @@ const loop = (time: number) => {
 
   controls.update(delta);
 
-  if (cube) {
-    cube.rotation.y += delta;
-    cube.rotation.x += delta * 0.5;
+  const cosPitch = Math.cos(player.pitch);
+  setVec3(rayDirection, Math.sin(player.yaw) * cosPitch, Math.sin(player.pitch), Math.cos(player.yaw) * cosPitch);
+  normalizeVec3(rayDirection);
+
+  const hit = world.raycastBlock(player.position, rayDirection, RAYCAST_MAX);
+  renderer.setHighlight(hit.hit ? hit : null);
+  hud.setTargetBlock(hit.hit ? world.getBlock(hit.wx, hit.wy, hit.wz) : null);
+
+  if (hit.hit && controls.consumeBreakRequest()) {
+    world.setBlock(hit.wx, hit.wy, hit.wz, 0);
+  }
+
+  if (hit.hit && controls.consumePlaceRequest()) {
+    const targetX = hit.wx + hit.face[0];
+    const targetY = hit.wy + hit.face[1];
+    const targetZ = hit.wz + hit.face[2];
+    if (world.getBlock(targetX, targetY, targetZ) === 0) {
+      world.setBlock(targetX, targetY, targetZ, controls.getSelectedBlock());
+    }
+  }
+
+  const selected = controls.getSelectedBlock();
+  if (selected !== lastSelected) {
+    lastSelected = selected;
+    hud.setSelectedBlock(selected);
   }
 
   hud.update(time, delta);
-  renderer.renderFrame(world, controls.getState());
+  renderer.renderFrame(world, controls.getState(), time);
 
   requestAnimationFrame(loop);
 };

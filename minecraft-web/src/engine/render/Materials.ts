@@ -1,16 +1,24 @@
-import { NearestFilter, Texture, TextureLoader } from "three";
+import { MeshStandardMaterial, NearestFilter, Texture, TextureLoader } from "three";
 
-let atlasPromise: Promise<Texture> | undefined;
+let atlasTexturePromise: Promise<Texture> | null = null;
+let atlasMaterialPromise: Promise<MeshStandardMaterial> | null = null;
 
-export const getAtlas = (): Promise<Texture> => {
-  if (!atlasPromise) {
+const loadAtlasTexture = async (): Promise<Texture> => {
+  if (!atlasTexturePromise) {
     const loader = new TextureLoader();
-    atlasPromise = loader.loadAsync("/textures/atlas.png").then((texture: Texture) => {
+    atlasTexturePromise = loader.loadAsync("/textures/atlas.png").then((texture) => {
       texture.magFilter = NearestFilter;
       texture.minFilter = NearestFilter;
       texture.generateMipmaps = false;
       return texture;
     });
   }
-  return atlasPromise!;
+  return atlasTexturePromise;
+};
+
+export const getAtlasMaterial = async (): Promise<MeshStandardMaterial> => {
+  if (!atlasMaterialPromise) {
+    atlasMaterialPromise = loadAtlasTexture().then((texture) => new MeshStandardMaterial({ map: texture }));
+  }
+  return atlasMaterialPromise;
 };

@@ -5,7 +5,9 @@ export const CHUNK = {
 } as const;
 
 export const RENDER_DIST = {
-  chunks: 3,
+  chunks: 6,
 } as const;
 
-export const SEA_LEVEL = 62;
+export const SEA_LEVEL = 64;
+
+export const RAYCAST_MAX = 128;
