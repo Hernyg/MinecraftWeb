@@ -218,7 +218,7 @@ const mesh = async (
                 texture: def.faces[faceKey],
                 normal: FACE_NORMALS[faceKey],
                 translucent: Boolean(def.translucent),
-                greedy: Boolean(def.greedy),
+                greedy: Boolean(def.opaque),
               };
             }
           }
@@ -233,7 +233,7 @@ const mesh = async (
                 texture: def.faces[faceKey],
                 normal: FACE_NORMALS[faceKey],
                 translucent: Boolean(def.translucent),
-                greedy: Boolean(def.greedy),
+                greedy: Boolean(def.opaque),
               };
             }
           }

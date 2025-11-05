@@ -116,7 +116,6 @@ export const LEAVES = register({
   opaque: false,
   faces: uniformFaces("leaves"),
   collidable: true,
-  greedy: false,
 });
 
 export const PLANKS = register({
