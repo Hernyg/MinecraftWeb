@@ -39,7 +39,12 @@ const loop = (time: number) => {
   controls.update(delta);
 
   const cosPitch = Math.cos(player.pitch);
-  setVec3(rayDirection, Math.sin(player.yaw) * cosPitch, Math.sin(player.pitch), Math.cos(player.yaw) * cosPitch);
+  setVec3(
+    rayDirection,
+    -Math.sin(player.yaw) * cosPitch,
+    Math.sin(player.pitch),
+    -Math.cos(player.yaw) * cosPitch,
+  );
   normalizeVec3(rayDirection);
 
   const hit = world.raycastBlock(player.position, rayDirection, RAYCAST_MAX);
