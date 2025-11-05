@@ -15,6 +15,7 @@ export interface BlockDef {
   collidable: boolean;
   translucent: boolean;
   gravity: boolean;
+  greedy: boolean;
 }
 
 const convertBlock = (block: WorldBlockDef): BlockDef => ({
@@ -25,6 +26,7 @@ const convertBlock = (block: WorldBlockDef): BlockDef => ({
   collidable: block.collidable,
   translucent: Boolean(block.translucent),
   gravity: Boolean(block.gravity),
+  greedy: Boolean(block.greedy ?? block.opaque),
 });
 
 export const Blocks: BlockDef[] = Array.from(BLOCK_REGISTRY.values()).map(convertBlock);

@@ -10,6 +10,7 @@ export interface BlockDef {
   collidable: boolean;
   translucent?: boolean;
   gravity?: boolean;
+  greedy?: boolean;
 }
 
 const FACE_KEYS: FaceKey[] = ["px", "nx", "py", "ny", "pz", "nz"];
@@ -17,8 +18,14 @@ const FACE_KEYS: FaceKey[] = ["px", "nx", "py", "ny", "pz", "nz"];
 const registry = new Map<number, BlockDef>();
 
 const register = (def: BlockDef): BlockDef => {
-  registry.set(def.id, def);
-  return def;
+  const resolved: BlockDef = {
+    ...def,
+    greedy: def.greedy ?? def.opaque,
+    translucent: def.translucent,
+    gravity: def.gravity,
+  };
+  registry.set(resolved.id, resolved);
+  return resolved;
 };
 
 const uniformFaces = (texture: string): BlockFaceTextures => ({
@@ -69,6 +76,7 @@ export const GRASS = register({
     nz: "grass_side",
   }),
   collidable: true,
+  greedy: false,
 });
 
 export const DIRT = register({
@@ -152,6 +160,7 @@ export const WATER = register({
   faces: uniformFaces("water"),
   collidable: false,
   translucent: true,
+  greedy: true,
 });
 
 export const BEDROCK = register({
