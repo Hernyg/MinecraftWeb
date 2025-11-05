@@ -1,6 +1,5 @@
 import { expose, transfer } from "comlink";
 import { BlockById } from "../data/blocks";
-import type { BlockMaterial } from "../data/blocks";
 import type { ChunkDims, MeshResult, NeighborChunks, FaceKey, MeshBuffers } from "../engine/utils/Types";
 import { loadUVAtlas, uvRect } from "../engine/render/UVMapper";
 import type { UVRect } from "../engine/render/UVMapper";
@@ -10,8 +9,8 @@ interface MaskCell {
   face: FaceKey;
   texture: string;
   normal: [number, number, number];
+  translucent: boolean;
   greedy: boolean;
-  material: BlockMaterial;
 }
 
 interface MeshAccumulator {
@@ -219,8 +218,8 @@ const mesh = async (
                 face: faceKey,
                 texture: def.faces[faceKey],
                 normal: FACE_NORMALS[faceKey],
-                greedy: Boolean(def.greedy),
-                material: def.material,
+                translucent: Boolean(def.translucent),
+                greedy: Boolean(def.opaque),
               };
             }
           }
@@ -234,8 +233,8 @@ const mesh = async (
                 face: faceKey,
                 texture: def.faces[faceKey],
                 normal: FACE_NORMALS[faceKey],
-                greedy: Boolean(def.greedy),
-                material: def.material,
+                translucent: Boolean(def.translucent),
+                greedy: Boolean(def.opaque),
               };
             }
           }

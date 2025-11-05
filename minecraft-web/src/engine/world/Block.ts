@@ -12,7 +12,6 @@ export interface BlockDef {
   collidable: boolean;
   gravity?: boolean;
   greedy?: boolean;
-  material?: BlockMaterial;
 }
 
 const FACE_KEYS: FaceKey[] = ["px", "nx", "py", "ny", "pz", "nz"];
@@ -23,8 +22,8 @@ const register = (def: BlockDef): BlockDef => {
   const resolved: BlockDef = {
     ...def,
     greedy: def.greedy ?? def.opaque,
+    translucent: def.translucent,
     gravity: def.gravity,
-    material: def.material ?? "opaque",
   };
   registry.set(resolved.id, resolved);
   return resolved;
@@ -118,8 +117,6 @@ export const LEAVES = register({
   opaque: false,
   faces: uniformFaces("leaves"),
   collidable: true,
-  greedy: false,
-  material: "cutout",
 });
 
 export const PLANKS = register({
@@ -162,8 +159,8 @@ export const WATER = register({
   opaque: false,
   faces: uniformFaces("water"),
   collidable: false,
+  translucent: true,
   greedy: true,
-  material: "water",
 });
 
 export const BEDROCK = register({
