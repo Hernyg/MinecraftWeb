@@ -63,7 +63,7 @@ const FACE_MAP: readonly {
   { axis: 2, positive: "pz", negative: "nz" },
 ];
 
-const PADDING_PX = 1;
+const PADDING_PX = 0.5;
 
 const sampleIndex = (dims: ChunkDims, x: number, y: number, z: number): number => y + dims[1] * (x + dims[0] * z);
 
@@ -181,7 +181,8 @@ const mesh = async (
   await ensureAtlas();
 
   const opaque = createAccumulator();
-  const translucent = createAccumulator();
+  const cutout = createAccumulator();
+  const water = createAccumulator();
 
   const x: [number, number, number] = [0, 0, 0];
   const q: [number, number, number] = [0, 0, 0];
@@ -297,7 +298,8 @@ const mesh = async (
           dvVec[v] = height;
 
           const rect = getUV(cell.texture);
-          const target = cell.translucent ? translucent : opaque;
+          const target =
+            cell.material === "water" ? water : cell.material === "cutout" ? cutout : opaque;
           emitQuad(target, base, duVec, dvVec, cell.normal, rect);
 
           for (let y = 0; y < height; y += 1) {
@@ -321,7 +323,8 @@ const mesh = async (
 
   const result: MeshResult = {
     opaque: buildBuffers(opaque),
-    translucent: buildBuffers(translucent),
+    cutout: buildBuffers(cutout),
+    water: buildBuffers(water),
   };
 
   return transfer(result, [
@@ -329,10 +332,14 @@ const mesh = async (
     result.opaque.normals.buffer,
     result.opaque.uvs.buffer,
     result.opaque.indices.buffer,
-    result.translucent.positions.buffer,
-    result.translucent.normals.buffer,
-    result.translucent.uvs.buffer,
-    result.translucent.indices.buffer,
+    result.cutout.positions.buffer,
+    result.cutout.normals.buffer,
+    result.cutout.uvs.buffer,
+    result.cutout.indices.buffer,
+    result.water.positions.buffer,
+    result.water.normals.buffer,
+    result.water.uvs.buffer,
+    result.water.indices.buffer,
   ]);
 };
 

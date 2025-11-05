@@ -2,6 +2,7 @@ import type { FaceKey } from "../engine/utils/Types";
 import {
   BLOCK_REGISTRY,
   type BlockDef as WorldBlockDef,
+  type BlockMaterial,
   placeableIds as worldPlaceableIds,
 } from "../engine/world/Block";
 
@@ -13,7 +14,6 @@ export interface BlockDef {
   opaque: boolean;
   faces: BlockFaceTextures;
   collidable: boolean;
-  translucent: boolean;
   gravity: boolean;
   greedy: boolean;
 }
@@ -24,7 +24,6 @@ const convertBlock = (block: WorldBlockDef): BlockDef => ({
   opaque: block.opaque,
   faces: block.faces,
   collidable: block.collidable,
-  translucent: Boolean(block.translucent),
   gravity: Boolean(block.gravity),
   greedy: Boolean(block.greedy ?? block.opaque),
 });
@@ -37,8 +36,8 @@ export const isOpaque = (id: number): boolean => BlockById.get(id)?.opaque ?? fa
 
 export const isCollidable = (id: number): boolean => BlockById.get(id)?.collidable ?? false;
 
-export const isTranslucent = (id: number): boolean => BlockById.get(id)?.translucent ?? false;
-
 export const hasGravity = (id: number): boolean => BlockById.get(id)?.gravity ?? false;
 
 export const placeableIds: number[] = [...worldPlaceableIds];
+
+export type { BlockMaterial };

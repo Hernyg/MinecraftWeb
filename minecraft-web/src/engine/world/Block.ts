@@ -2,13 +2,14 @@ import type { FaceKey } from "../utils/Types";
 
 export type BlockFaceTextures = Record<FaceKey, string>;
 
+export type BlockMaterial = "opaque" | "cutout" | "water";
+
 export interface BlockDef {
   id: number;
   name: string;
   opaque: boolean;
   faces: BlockFaceTextures;
   collidable: boolean;
-  translucent?: boolean;
   gravity?: boolean;
   greedy?: boolean;
 }
@@ -132,7 +133,6 @@ export const GLASS = register({
   opaque: false,
   faces: uniformFaces("glass"),
   collidable: true,
-  translucent: true,
 });
 
 export const SAND = register({
