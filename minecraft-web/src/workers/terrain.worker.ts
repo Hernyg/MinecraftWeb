@@ -57,13 +57,17 @@ const tryPlaceTree = (
     return;
   }
 
+  const radius = 2;
+  if (lx - radius < 0 || lx + radius >= sx || lz - radius < 0 || lz + radius >= sz) {
+    return;
+  }
+
   for (let h = 0; h < trunkHeight; h += 1) {
     const y = trunkBase + h;
     const idx = indexOf(dims, lx, y, lz);
     blocks[idx] = 4;
   }
 
-  const radius = 2;
   const leafCenterY = trunkTop;
   for (let dy = -radius; dy <= radius; dy += 1) {
     for (let dx = -radius; dx <= radius; dx += 1) {
