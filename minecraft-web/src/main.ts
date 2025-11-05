@@ -23,7 +23,7 @@ const player: PlayerState = {
   velocity: createVec3(),
   yaw: Math.PI,
   pitch: 0,
-  eyeHeight: 1.9,
+  eyeHeight: 1.62,
   flying: false,
   onGround: false,
 };

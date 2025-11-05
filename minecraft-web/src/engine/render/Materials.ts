@@ -33,15 +33,15 @@ export const getAtlasMaterial = async (): Promise<MeshStandardMaterial> => {
         vertexColors: false,
       });
       const configured = material as MeshStandardMaterial & {
-        metalness: number;
-        roughness: number;
         transparent: boolean;
         alphaTest: number;
+        metalness: number;
+        roughness: number;
       };
+      configured.transparent = true;
+      configured.alphaTest = 0.2;
       configured.metalness = 0;
       configured.roughness = 1;
-      configured.transparent = false;
-      configured.alphaTest = 0;
       return configured;
     });
   }

@@ -1,6 +1,6 @@
 import { expose, transfer } from "comlink";
 import { BlockById } from "../data/blocks";
-import type { ChunkDims, MeshBuffers, MeshResult, NeighborChunks, FaceKey } from "../engine/utils/Types";
+import type { ChunkDims, MeshResult, NeighborChunks, FaceKey } from "../engine/utils/Types";
 import { loadUVAtlas, uvRect } from "../engine/render/UVMapper";
 import type { UVRect } from "../engine/render/UVMapper";
 

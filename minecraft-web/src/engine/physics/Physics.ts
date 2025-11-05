@@ -2,14 +2,14 @@ import { isCollidable } from "../../data/blocks";
 import type { Controls, PlayerState } from "../input/Controls";
 import type { World } from "../world/World";
 
-const PLAYER_HEIGHT = 1.9;
+const PLAYER_HEIGHT = 1.8;
 const PLAYER_RADIUS = 0.3;
 const GRAVITY = -32;
 const JUMP_VELOCITY = 8.5;
 const WALK_SPEED = 4.6;
 const FLY_SPEED = 10;
 const MAX_FALL_SPEED = -60;
-const EPSILON = 1e-3;
+const EPSILON = 1e-4;
 
 interface CollisionCell {
   x: number;
