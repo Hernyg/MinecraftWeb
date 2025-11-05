@@ -1,7 +1,5 @@
 import type { FaceKey } from "../utils/Types";
 
-export type BlockCollision = "solid" | "none";
-
 export type BlockFaceTextures = Record<FaceKey, string>;
 
 export interface BlockDef {
@@ -9,7 +7,9 @@ export interface BlockDef {
   name: string;
   opaque: boolean;
   faces: BlockFaceTextures;
-  collision: BlockCollision;
+  collidable: boolean;
+  translucent?: boolean;
+  gravity?: boolean;
 }
 
 const FACE_KEYS: FaceKey[] = ["px", "nx", "py", "ny", "pz", "nz"];
@@ -53,7 +53,7 @@ export const AIR = register({
   name: "air",
   opaque: false,
   faces: uniformFaces("air"),
-  collision: "none",
+  collidable: false,
 });
 
 export const GRASS = register({
@@ -68,7 +68,7 @@ export const GRASS = register({
     pz: "grass_side",
     nz: "grass_side",
   }),
-  collision: "solid",
+  collidable: true,
 });
 
 export const DIRT = register({
@@ -76,7 +76,7 @@ export const DIRT = register({
   name: "dirt",
   opaque: true,
   faces: uniformFaces("dirt"),
-  collision: "solid",
+  collidable: true,
 });
 
 export const STONE = register({
@@ -84,28 +84,100 @@ export const STONE = register({
   name: "stone",
   opaque: true,
   faces: uniformFaces("stone"),
-  collision: "solid",
+  collidable: true,
 });
 
 export const LOG = register({
   id: 4,
   name: "log",
   opaque: true,
-  faces: uniformFaces("log"),
-  collision: "solid",
+  faces: createFaces({
+    px: "log_side",
+    nx: "log_side",
+    py: "log_top",
+    ny: "log_top",
+    pz: "log_side",
+    nz: "log_side",
+  }),
+  collidable: true,
 });
 
 export const LEAVES = register({
   id: 5,
   name: "leaves",
-  opaque: true,
+  opaque: false,
   faces: uniformFaces("leaves"),
-  collision: "solid",
+  collidable: true,
+  translucent: true,
+});
+
+export const PLANKS = register({
+  id: 6,
+  name: "planks",
+  opaque: true,
+  faces: uniformFaces("planks"),
+  collidable: true,
+});
+
+export const GLASS = register({
+  id: 7,
+  name: "glass",
+  opaque: false,
+  faces: uniformFaces("glass"),
+  collidable: true,
+  translucent: true,
+});
+
+export const SAND = register({
+  id: 8,
+  name: "sand",
+  opaque: true,
+  faces: uniformFaces("sand"),
+  collidable: true,
+  gravity: true,
+});
+
+export const GRAVEL = register({
+  id: 9,
+  name: "gravel",
+  opaque: true,
+  faces: uniformFaces("gravel"),
+  collidable: true,
+  gravity: true,
+});
+
+export const WATER = register({
+  id: 10,
+  name: "water",
+  opaque: false,
+  faces: uniformFaces("water"),
+  collidable: false,
+  translucent: true,
+});
+
+export const BEDROCK = register({
+  id: 11,
+  name: "bedrock",
+  opaque: true,
+  faces: uniformFaces("bedrock"),
+  collidable: true,
 });
 
 export const BLOCK_REGISTRY = registry;
 
-export const placeableIds: number[] = [1, 2, 3, 4, 5];
+export const placeableIds: number[] = [
+  GRASS.id,
+  DIRT.id,
+  STONE.id,
+  LOG.id,
+  LEAVES.id,
+  PLANKS.id,
+  GLASS.id,
+  SAND.id,
+  GRAVEL.id,
+  WATER.id,
+  BEDROCK.id,
+];
 
 export const getBlock = (id: number): BlockDef => registry.get(id) ?? AIR;
 

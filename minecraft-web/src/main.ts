@@ -5,6 +5,7 @@ import { Controls, type PlayerState } from "./engine/input/Controls";
 import { createVec3, setVec3, normalizeVec3 } from "./engine/utils/Vec3";
 import { initHUD } from "./ui/hud";
 import { CHUNK, RAYCAST_MAX } from "./data/config";
+import { Physics } from "./engine/physics/Physics";
 
 const canvas = document.getElementById("game") as HTMLCanvasElement | null;
 if (!canvas) {
@@ -15,20 +16,28 @@ const renderer = new Renderer(canvas);
 const world = new World(renderer);
 const pointerLock = new PointerLock(canvas);
 
+const hud = initHUD();
+
 const player: PlayerState = {
   position: createVec3(0, 80, 0),
   velocity: createVec3(),
   yaw: Math.PI,
   pitch: 0,
+  eyeHeight: 1.9,
+  flying: false,
+  onGround: false,
 };
 
-const controls = new Controls(pointerLock, player);
-const hud = initHUD();
+const controls = new Controls(pointerLock, player, {
+  onPreventQuit: () => hud.showPreventQuitMessage(),
+});
+const physics = new Physics(world);
 
 let lastSelected = controls.getSelectedBlock();
 hud.setSelectedBlock(lastSelected);
 
 const rayDirection = createVec3();
+const eyePosition = createVec3();
 
 let last = performance.now();
 
@@ -37,6 +46,7 @@ const loop = (time: number) => {
   last = time;
 
   controls.update(delta);
+  physics.step(player, controls, delta);
 
   const cosPitch = Math.cos(player.pitch);
   setVec3(
@@ -47,7 +57,9 @@ const loop = (time: number) => {
   );
   normalizeVec3(rayDirection);
 
-  const hit = world.raycastBlock(player.position, rayDirection, RAYCAST_MAX);
+  setVec3(eyePosition, player.position.x, player.position.y + player.eyeHeight, player.position.z);
+
+  const hit = world.raycastBlock(eyePosition, rayDirection, RAYCAST_MAX);
   const placeHeld = controls.isPlaceHeld();
   let highlightTarget: { x: number; y: number; z: number } | null = null;
 

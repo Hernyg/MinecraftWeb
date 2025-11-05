@@ -1,22 +1,40 @@
-import {
-  BufferAttribute,
-  BufferGeometry,
-  Mesh,
-} from "three";
-import type { MeshResult } from "../utils/Types";
-import { getAtlasMaterial } from "./Materials";
+import { BufferAttribute, BufferGeometry, Group, Mesh, type Object3D } from "three";
+import type { MeshBuffers, MeshResult } from "../utils/Types";
+import { getAtlasMaterial, getTranslucentAtlasMaterial } from "./Materials";
 
-export const buildChunkMesh = async (data: MeshResult): Promise<Mesh | null> => {
-  if (data.indices.length === 0) {
+const buildGeometry = (buffers: MeshBuffers): BufferGeometry => {
+  const geometry = new BufferGeometry();
+  geometry.setAttribute("position", new BufferAttribute(buffers.positions, 3));
+  geometry.setAttribute("normal", new BufferAttribute(buffers.normals, 3));
+  geometry.setAttribute("uv", new BufferAttribute(buffers.uvs, 2));
+  geometry.setIndex(new BufferAttribute(buffers.indices, 1));
+  return geometry;
+};
+
+export const buildChunkMesh = async (data: MeshResult): Promise<Object3D | null> => {
+  const group = new Group();
+  let childCount = 0;
+
+  if (data.opaque.indices.length > 0) {
+    const geometry = buildGeometry(data.opaque);
+    const material = await getAtlasMaterial();
+    const mesh = new Mesh(geometry, material);
+    group.add(mesh);
+    childCount += 1;
+  }
+
+  if (data.translucent.indices.length > 0) {
+    const geometry = buildGeometry(data.translucent);
+    const material = await getTranslucentAtlasMaterial();
+    const mesh = new Mesh(geometry, material);
+    (mesh as Mesh & { renderOrder: number }).renderOrder = 1;
+    group.add(mesh);
+    childCount += 1;
+  }
+
+  if (childCount === 0) {
     return null;
   }
 
-  const geometry = new BufferGeometry();
-  geometry.setAttribute("position", new BufferAttribute(data.positions, 3));
-  geometry.setAttribute("normal", new BufferAttribute(data.normals, 3));
-  geometry.setAttribute("uv", new BufferAttribute(data.uvs, 2));
-  geometry.setIndex(new BufferAttribute(data.indices, 1));
-
-  const material = await getAtlasMaterial();
-  return new Mesh(geometry, material);
+  return group;
 };

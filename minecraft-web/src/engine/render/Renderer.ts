@@ -7,7 +7,7 @@ import {
   Group,
   LineBasicMaterial,
   LineSegments,
-  Mesh,
+  Object3D,
   PerspectiveCamera,
   Scene,
   WebGLRenderer,
@@ -85,12 +85,12 @@ export class Renderer {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
   };
 
-  addChunkMesh(key: string, mesh: Mesh): void {
+  addChunkMesh(key: string, mesh: Object3D): void {
     mesh.userData.chunkKey = key;
     this.chunkRoot.add(mesh);
   }
 
-  removeChunkMesh(_key: string, mesh: Mesh): void {
+  removeChunkMesh(_key: string, mesh: Object3D): void {
     this.chunkRoot.remove(mesh);
   }
 
@@ -103,7 +103,7 @@ export class Renderer {
   }
 
   renderFrame(world: World, player: PlayerState, now: number): void {
-    this.camera.position.set(player.position.x, player.position.y, player.position.z);
+    this.camera.position.set(player.position.x, player.position.y + player.eyeHeight, player.position.z);
     this.camera.rotation.x = player.pitch;
     this.camera.rotation.y = player.yaw;
 
