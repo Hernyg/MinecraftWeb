@@ -11,7 +11,8 @@ export interface MeshBuffers {
 
 export interface MeshResult {
   opaque: MeshBuffers;
-  translucent: MeshBuffers;
+  cutout: MeshBuffers;
+  water: MeshBuffers;
 }
 
 export type NeighborChunks = Partial<Record<FaceKey, Uint16Array>>;

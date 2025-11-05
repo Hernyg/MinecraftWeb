@@ -2,14 +2,17 @@ import type { FaceKey } from "../utils/Types";
 
 export type BlockFaceTextures = Record<FaceKey, string>;
 
+export type BlockMaterial = "opaque" | "cutout" | "water";
+
 export interface BlockDef {
   id: number;
   name: string;
   opaque: boolean;
   faces: BlockFaceTextures;
   collidable: boolean;
-  translucent?: boolean;
   gravity?: boolean;
+  greedy?: boolean;
+  material?: BlockMaterial;
 }
 
 const FACE_KEYS: FaceKey[] = ["px", "nx", "py", "ny", "pz", "nz"];
@@ -17,8 +20,14 @@ const FACE_KEYS: FaceKey[] = ["px", "nx", "py", "ny", "pz", "nz"];
 const registry = new Map<number, BlockDef>();
 
 const register = (def: BlockDef): BlockDef => {
-  registry.set(def.id, def);
-  return def;
+  const resolved: BlockDef = {
+    ...def,
+    greedy: def.greedy ?? def.opaque,
+    gravity: def.gravity,
+    material: def.material ?? "opaque",
+  };
+  registry.set(resolved.id, resolved);
+  return resolved;
 };
 
 const uniformFaces = (texture: string): BlockFaceTextures => ({
@@ -69,6 +78,7 @@ export const GRASS = register({
     nz: "grass_side",
   }),
   collidable: true,
+  greedy: false,
 });
 
 export const DIRT = register({
@@ -108,7 +118,8 @@ export const LEAVES = register({
   opaque: false,
   faces: uniformFaces("leaves"),
   collidable: true,
-  translucent: true,
+  greedy: false,
+  material: "cutout",
 });
 
 export const PLANKS = register({
@@ -125,7 +136,6 @@ export const GLASS = register({
   opaque: false,
   faces: uniformFaces("glass"),
   collidable: true,
-  translucent: true,
 });
 
 export const SAND = register({
@@ -152,7 +162,8 @@ export const WATER = register({
   opaque: false,
   faces: uniformFaces("water"),
   collidable: false,
-  translucent: true,
+  greedy: true,
+  material: "water",
 });
 
 export const BEDROCK = register({

@@ -1,6 +1,7 @@
 import { expose, transfer } from "comlink";
 import { BlockById } from "../data/blocks";
-import type { ChunkDims, MeshResult, NeighborChunks, FaceKey } from "../engine/utils/Types";
+import type { BlockMaterial } from "../data/blocks";
+import type { ChunkDims, MeshResult, NeighborChunks, FaceKey, MeshBuffers } from "../engine/utils/Types";
 import { loadUVAtlas, uvRect } from "../engine/render/UVMapper";
 import type { UVRect } from "../engine/render/UVMapper";
 
@@ -9,7 +10,8 @@ interface MaskCell {
   face: FaceKey;
   texture: string;
   normal: [number, number, number];
-  translucent: boolean;
+  greedy: boolean;
+  material: BlockMaterial;
 }
 
 interface MeshAccumulator {
@@ -62,7 +64,7 @@ const FACE_MAP: readonly {
   { axis: 2, positive: "pz", negative: "nz" },
 ];
 
-const PADDING_PX = 1;
+const PADDING_PX = 0.5;
 
 const sampleIndex = (dims: ChunkDims, x: number, y: number, z: number): number => y + dims[1] * (x + dims[0] * z);
 
@@ -180,7 +182,8 @@ const mesh = async (
   await ensureAtlas();
 
   const opaque = createAccumulator();
-  const translucent = createAccumulator();
+  const cutout = createAccumulator();
+  const water = createAccumulator();
 
   const x: [number, number, number] = [0, 0, 0];
   const q: [number, number, number] = [0, 0, 0];
@@ -216,7 +219,8 @@ const mesh = async (
                 face: faceKey,
                 texture: def.faces[faceKey],
                 normal: FACE_NORMALS[faceKey],
-                translucent: Boolean(def.translucent),
+                greedy: Boolean(def.greedy),
+                material: def.material,
               };
             }
           }
@@ -230,7 +234,8 @@ const mesh = async (
                 face: faceKey,
                 texture: def.faces[faceKey],
                 normal: FACE_NORMALS[faceKey],
-                translucent: Boolean(def.translucent),
+                greedy: Boolean(def.greedy),
+                material: def.material,
               };
             }
           }
@@ -251,25 +256,36 @@ const mesh = async (
           }
 
           let width = 1;
-          while (
-            i + width < dimsU &&
-            mask[i + width + j * dimsU] &&
-            mask[i + width + j * dimsU]?.face === cell.face &&
-            mask[i + width + j * dimsU]?.texture === cell.texture &&
-            mask[i + width + j * dimsU]?.id === cell.id
-          ) {
-            width += 1;
+          if (cell.greedy) {
+            while (
+              i + width < dimsU &&
+              mask[i + width + j * dimsU] &&
+              mask[i + width + j * dimsU]?.face === cell.face &&
+              mask[i + width + j * dimsU]?.texture === cell.texture &&
+              mask[i + width + j * dimsU]?.id === cell.id &&
+              mask[i + width + j * dimsU]?.greedy === cell.greedy
+            ) {
+              width += 1;
+            }
           }
 
           let height = 1;
-          outer: while (j + height < dimsV) {
-            for (let k = 0; k < width; k += 1) {
-              const next = mask[i + k + (j + height) * dimsU];
-              if (!next || next.face !== cell.face || next.texture !== cell.texture || next.id !== cell.id) {
-                break outer;
+          if (cell.greedy) {
+            outer: while (j + height < dimsV) {
+              for (let k = 0; k < width; k += 1) {
+                const next = mask[i + k + (j + height) * dimsU];
+                if (
+                  !next ||
+                  next.face !== cell.face ||
+                  next.texture !== cell.texture ||
+                  next.id !== cell.id ||
+                  next.greedy !== cell.greedy
+                ) {
+                  break outer;
+                }
               }
+              height += 1;
             }
-            height += 1;
           }
 
           const base: [number, number, number] = [0, 0, 0];
@@ -283,7 +299,8 @@ const mesh = async (
           dvVec[v] = height;
 
           const rect = getUV(cell.texture);
-          const target = cell.translucent ? translucent : opaque;
+          const target =
+            cell.material === "water" ? water : cell.material === "cutout" ? cutout : opaque;
           emitQuad(target, base, duVec, dvVec, cell.normal, rect);
 
           for (let y = 0; y < height; y += 1) {
@@ -307,7 +324,8 @@ const mesh = async (
 
   const result: MeshResult = {
     opaque: buildBuffers(opaque),
-    translucent: buildBuffers(translucent),
+    cutout: buildBuffers(cutout),
+    water: buildBuffers(water),
   };
 
   return transfer(result, [
@@ -315,10 +333,14 @@ const mesh = async (
     result.opaque.normals.buffer,
     result.opaque.uvs.buffer,
     result.opaque.indices.buffer,
-    result.translucent.positions.buffer,
-    result.translucent.normals.buffer,
-    result.translucent.uvs.buffer,
-    result.translucent.indices.buffer,
+    result.cutout.positions.buffer,
+    result.cutout.normals.buffer,
+    result.cutout.uvs.buffer,
+    result.cutout.indices.buffer,
+    result.water.positions.buffer,
+    result.water.normals.buffer,
+    result.water.uvs.buffer,
+    result.water.indices.buffer,
   ]);
 };
 
