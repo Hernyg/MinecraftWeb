@@ -140,7 +140,7 @@ const emitQuad = (
   const { u0, v0, u1, v1 } = rect;
   uvs.push(u1, v1, u1, v0, u0, v0, u0, v1);
 
-  indices.push(vertBase, vertBase + 1, vertBase + 2, vertBase, vertBase + 2, vertBase + 3);
+  indices.push(vertBase, vertBase + 2, vertBase + 1, vertBase, vertBase + 3, vertBase + 2);
 };
 
 const mesh = async (
