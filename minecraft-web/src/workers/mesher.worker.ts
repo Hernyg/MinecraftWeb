@@ -1,6 +1,6 @@
 import { expose, transfer } from "comlink";
 import { BlockById } from "../data/blocks";
-import type { ChunkDims, MeshResult, NeighborChunks, FaceKey } from "../engine/utils/Types";
+import type { ChunkDims, MeshResult, NeighborChunks, FaceKey, MeshBuffers } from "../engine/utils/Types";
 import { loadUVAtlas, uvRect } from "../engine/render/UVMapper";
 import type { UVRect } from "../engine/render/UVMapper";
 
@@ -10,6 +10,7 @@ interface MaskCell {
   texture: string;
   normal: [number, number, number];
   translucent: boolean;
+  greedy: boolean;
 }
 
 interface MeshAccumulator {
@@ -217,6 +218,7 @@ const mesh = async (
                 texture: def.faces[faceKey],
                 normal: FACE_NORMALS[faceKey],
                 translucent: Boolean(def.translucent),
+                greedy: Boolean(def.greedy),
               };
             }
           }
@@ -231,6 +233,7 @@ const mesh = async (
                 texture: def.faces[faceKey],
                 normal: FACE_NORMALS[faceKey],
                 translucent: Boolean(def.translucent),
+                greedy: Boolean(def.greedy),
               };
             }
           }
@@ -251,25 +254,36 @@ const mesh = async (
           }
 
           let width = 1;
-          while (
-            i + width < dimsU &&
-            mask[i + width + j * dimsU] &&
-            mask[i + width + j * dimsU]?.face === cell.face &&
-            mask[i + width + j * dimsU]?.texture === cell.texture &&
-            mask[i + width + j * dimsU]?.id === cell.id
-          ) {
-            width += 1;
+          if (cell.greedy) {
+            while (
+              i + width < dimsU &&
+              mask[i + width + j * dimsU] &&
+              mask[i + width + j * dimsU]?.face === cell.face &&
+              mask[i + width + j * dimsU]?.texture === cell.texture &&
+              mask[i + width + j * dimsU]?.id === cell.id &&
+              mask[i + width + j * dimsU]?.greedy === cell.greedy
+            ) {
+              width += 1;
+            }
           }
 
           let height = 1;
-          outer: while (j + height < dimsV) {
-            for (let k = 0; k < width; k += 1) {
-              const next = mask[i + k + (j + height) * dimsU];
-              if (!next || next.face !== cell.face || next.texture !== cell.texture || next.id !== cell.id) {
-                break outer;
+          if (cell.greedy) {
+            outer: while (j + height < dimsV) {
+              for (let k = 0; k < width; k += 1) {
+                const next = mask[i + k + (j + height) * dimsU];
+                if (
+                  !next ||
+                  next.face !== cell.face ||
+                  next.texture !== cell.texture ||
+                  next.id !== cell.id ||
+                  next.greedy !== cell.greedy
+                ) {
+                  break outer;
+                }
               }
+              height += 1;
             }
-            height += 1;
           }
 
           const base: [number, number, number] = [0, 0, 0];
