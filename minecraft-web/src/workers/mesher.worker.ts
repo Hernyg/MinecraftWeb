@@ -9,7 +9,22 @@ interface MaskCell {
   face: FaceKey;
   texture: string;
   normal: [number, number, number];
+  translucent: boolean;
 }
+
+interface MeshAccumulator {
+  positions: number[];
+  normals: number[];
+  uvs: number[];
+  indices: number[];
+}
+
+const createAccumulator = (): MeshAccumulator => ({
+  positions: [],
+  normals: [],
+  uvs: [],
+  indices: [],
+});
 
 const FACE_NORMALS: Record<FaceKey, [number, number, number]> = {
   px: [1, 0, 0],
@@ -130,17 +145,14 @@ const addVec = (a: [number, number, number], b: [number, number, number]): [numb
 ];
 
 const emitQuad = (
-  positions: number[],
-  normals: number[],
-  uvs: number[],
-  indices: number[],
+  target: MeshAccumulator,
   base: [number, number, number],
   du: [number, number, number],
   dv: [number, number, number],
   normal: [number, number, number],
   rect: UVRect,
 ) => {
-  const vertBase = positions.length / 3;
+  const vertBase = target.positions.length / 3;
 
   let vertices: [number, number, number][];
   if (normal[0] > 0 || normal[1] > 0 || normal[2] > 0) {
@@ -150,14 +162,14 @@ const emitQuad = (
   }
 
   for (const vertex of vertices) {
-    pushVertex(positions, vertex);
-    normals.push(normal[0], normal[1], normal[2]);
+    pushVertex(target.positions, vertex);
+    target.normals.push(normal[0], normal[1], normal[2]);
   }
 
   const { u0, v0, u1, v1 } = rect;
-  uvs.push(u1, v1, u1, v0, u0, v0, u0, v1);
+  target.uvs.push(u1, v1, u1, v0, u0, v0, u0, v1);
 
-  indices.push(vertBase, vertBase + 2, vertBase + 1, vertBase, vertBase + 3, vertBase + 2);
+  target.indices.push(vertBase, vertBase + 2, vertBase + 1, vertBase, vertBase + 3, vertBase + 2);
 };
 
 const mesh = async (
@@ -167,10 +179,8 @@ const mesh = async (
 ): Promise<MeshResult> => {
   await ensureAtlas();
 
-  const positions: number[] = [];
-  const normals: number[] = [];
-  const uvs: number[] = [];
-  const indices: number[] = [];
+  const opaque = createAccumulator();
+  const translucent = createAccumulator();
 
   const x: [number, number, number] = [0, 0, 0];
   const q: [number, number, number] = [0, 0, 0];
@@ -206,6 +216,7 @@ const mesh = async (
                 face: faceKey,
                 texture: def.faces[faceKey],
                 normal: FACE_NORMALS[faceKey],
+                translucent: Boolean(def.translucent),
               };
             }
           }
@@ -219,6 +230,7 @@ const mesh = async (
                 face: faceKey,
                 texture: def.faces[faceKey],
                 normal: FACE_NORMALS[faceKey],
+                translucent: Boolean(def.translucent),
               };
             }
           }
@@ -271,7 +283,8 @@ const mesh = async (
           dvVec[v] = height;
 
           const rect = getUV(cell.texture);
-          emitQuad(positions, normals, uvs, indices, base, duVec, dvVec, cell.normal, rect);
+          const target = cell.translucent ? translucent : opaque;
+          emitQuad(target, base, duVec, dvVec, cell.normal, rect);
 
           for (let y = 0; y < height; y += 1) {
             for (let xw = 0; xw < width; xw += 1) {
@@ -285,18 +298,27 @@ const mesh = async (
     }
   }
 
+  const buildBuffers = (acc: MeshAccumulator): MeshBuffers => ({
+    positions: new Float32Array(acc.positions),
+    normals: new Float32Array(acc.normals),
+    uvs: new Float32Array(acc.uvs),
+    indices: new Uint32Array(acc.indices),
+  });
+
   const result: MeshResult = {
-    positions: new Float32Array(positions),
-    normals: new Float32Array(normals),
-    uvs: new Float32Array(uvs),
-    indices: new Uint32Array(indices),
+    opaque: buildBuffers(opaque),
+    translucent: buildBuffers(translucent),
   };
 
   return transfer(result, [
-    result.positions.buffer,
-    result.normals.buffer,
-    result.uvs.buffer,
-    result.indices.buffer,
+    result.opaque.positions.buffer,
+    result.opaque.normals.buffer,
+    result.opaque.uvs.buffer,
+    result.opaque.indices.buffer,
+    result.translucent.positions.buffer,
+    result.translucent.normals.buffer,
+    result.translucent.uvs.buffer,
+    result.translucent.indices.buffer,
   ]);
 };
 

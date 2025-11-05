@@ -1,4 +1,4 @@
-import type { Mesh } from "three";
+import { Mesh, Object3D } from "three";
 import { CHUNK, RAYCAST_MAX, RENDER_DIST } from "../../data/config";
 import type { ChunkDims, NeighborChunks } from "../utils/Types";
 import { chunkKey, parseChunkKey, voxelToLocal, worldToChunk } from "../utils/ChunkKey";
@@ -13,10 +13,22 @@ import type { FaceKey } from "../utils/Types";
 
 interface ChunkState {
   chunk: Chunk;
-  mesh: Mesh | null;
+  mesh: Object3D | null;
   state: "pending" | "meshing" | "ready";
   remeshTimer: number | null;
 }
+
+const disposeChunkObject = (object: Object3D): void => {
+  if (object instanceof Mesh) {
+    object.geometry.dispose();
+  }
+  const children = (object as { children?: Object3D[] }).children;
+  if (children) {
+    for (const child of children) {
+      disposeChunkObject(child);
+    }
+  }
+};
 
 const dims: ChunkDims = [CHUNK.X, CHUNK.Y, CHUNK.Z];
 const neighborOffsets: Record<Exclude<FaceKey, "py" | "ny">, [number, number]> = {
@@ -72,7 +84,7 @@ export class World {
     }
     if (state.mesh) {
       this.renderer.removeChunkMesh(key, state.mesh);
-      state.mesh.geometry.dispose();
+      disposeChunkObject(state.mesh);
       state.mesh = null;
     }
     if (mesh) {
@@ -117,7 +129,7 @@ export class World {
       if (distance > RENDER_DIST.chunks + 1) {
         if (state.mesh) {
           this.renderer.removeChunkMesh(key, state.mesh);
-          state.mesh.geometry.dispose();
+          disposeChunkObject(state.mesh);
         }
         this.persistChunkEdits(key, state.chunk);
         this.chunks.delete(key);
