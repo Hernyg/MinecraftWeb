@@ -7,8 +7,9 @@ import {
 } from "three";
 
 let atlasTexturePromise: Promise<Texture> | null = null;
-let atlasMaterialPromise: Promise<MeshStandardMaterial> | null = null;
-let translucentMaterialPromise: Promise<MeshStandardMaterial> | null = null;
+let opaqueMaterialPromise: Promise<MeshStandardMaterial> | null = null;
+let cutoutMaterialPromise: Promise<MeshStandardMaterial> | null = null;
+let waterMaterialPromise: Promise<MeshStandardMaterial> | null = null;
 
 const loadAtlasTexture = async (): Promise<Texture> => {
   if (!atlasTexturePromise) {
@@ -25,50 +26,73 @@ const loadAtlasTexture = async (): Promise<Texture> => {
   return atlasTexturePromise;
 };
 
-export const getAtlasMaterial = async (): Promise<MeshStandardMaterial> => {
-  if (!atlasMaterialPromise) {
-    atlasMaterialPromise = loadAtlasTexture().then((texture) => {
+export const getOpaqueMaterial = async (): Promise<MeshStandardMaterial> => {
+  if (!opaqueMaterialPromise) {
+    opaqueMaterialPromise = loadAtlasTexture().then((texture) => {
       const material = new MeshStandardMaterial({
         map: texture,
         vertexColors: false,
       });
       const configured = material as MeshStandardMaterial & {
         transparent: boolean;
-        alphaTest: number;
         metalness: number;
         roughness: number;
       };
-      configured.transparent = true;
-      configured.alphaTest = 0.2;
+      configured.transparent = false;
       configured.metalness = 0;
       configured.roughness = 1;
       return configured;
     });
   }
-  return atlasMaterialPromise;
+  return opaqueMaterialPromise;
 };
 
-export const getTranslucentAtlasMaterial = async (): Promise<MeshStandardMaterial> => {
-  if (!translucentMaterialPromise) {
-    translucentMaterialPromise = loadAtlasTexture().then((texture) => {
+export const getCutoutMaterial = async (): Promise<MeshStandardMaterial> => {
+  if (!cutoutMaterialPromise) {
+    cutoutMaterialPromise = loadAtlasTexture().then((texture) => {
       const material = new MeshStandardMaterial({
         map: texture,
         vertexColors: false,
       });
       const configured = material as MeshStandardMaterial & {
+        transparent: boolean;
         metalness: number;
         roughness: number;
-        transparent: boolean;
         alphaTest: number;
-        depthWrite: boolean;
       };
+      configured.transparent = false;
       configured.metalness = 0;
       configured.roughness = 1;
-      configured.transparent = true;
-      configured.alphaTest = 0.05;
-      configured.depthWrite = false;
+      configured.alphaTest = 0.5;
       return configured;
     });
   }
-  return translucentMaterialPromise;
+  return cutoutMaterialPromise;
+};
+
+export const getWaterMaterial = async (): Promise<MeshStandardMaterial> => {
+  if (!waterMaterialPromise) {
+    waterMaterialPromise = loadAtlasTexture().then((texture) => {
+      const material = new MeshStandardMaterial({
+        map: texture,
+        vertexColors: false,
+      });
+      const configured = material as MeshStandardMaterial & {
+        transparent: boolean;
+        opacity: number;
+        metalness: number;
+        roughness: number;
+        depthWrite: boolean;
+        depthTest: boolean;
+      };
+      configured.transparent = false;
+      configured.opacity = 1;
+      configured.metalness = 0;
+      configured.roughness = 1;
+      configured.depthWrite = true;
+      configured.depthTest = true;
+      return configured;
+    });
+  }
+  return waterMaterialPromise;
 };
