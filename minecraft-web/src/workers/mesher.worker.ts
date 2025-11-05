@@ -1,5 +1,5 @@
 import { expose, transfer } from "comlink";
-import { BlockById, isOpaque } from "../data/blocks";
+import { BlockById } from "../data/blocks";
 import type { ChunkDims, MeshResult, NeighborChunks, FaceKey } from "../engine/utils/Types";
 import { loadUVAtlas, uvRect } from "../engine/render/UVMapper";
 import type { UVRect } from "../engine/render/UVMapper";
@@ -18,6 +18,23 @@ const FACE_NORMALS: Record<FaceKey, [number, number, number]> = {
   ny: [0, -1, 0],
   pz: [0, 0, 1],
   nz: [0, 0, -1],
+};
+
+const shouldRenderFace = (blockId: number, neighborId: number): boolean => {
+  if (blockId === 0) {
+    return false;
+  }
+  if (neighborId === 0) {
+    return true;
+  }
+  if (blockId === neighborId) {
+    return false;
+  }
+  const neighborDef = BlockById.get(neighborId);
+  if (!neighborDef) {
+    return true;
+  }
+  return !neighborDef.opaque;
 };
 
 const FACE_MAP: readonly {
@@ -180,25 +197,27 @@ const mesh = async (
 
           let cell: MaskCell | null = null;
 
-          if (a !== 0 && isOpaque(a) && (!isOpaque(b) || b === 0)) {
+          if (a !== 0) {
             const def = BlockById.get(a);
-            if (def) {
+            if (def && shouldRenderFace(a, b)) {
               const faceKey = face.positive;
               cell = {
                 id: a,
                 face: faceKey,
-                texture: def.textures[faceKey],
+                texture: def.faces[faceKey],
                 normal: FACE_NORMALS[faceKey],
               };
             }
-          } else if (b !== 0 && isOpaque(b) && (!isOpaque(a) || a === 0)) {
+          }
+
+          if (!cell && b !== 0) {
             const def = BlockById.get(b);
-            if (def) {
+            if (def && shouldRenderFace(b, a)) {
               const faceKey = face.negative;
               cell = {
                 id: b,
                 face: faceKey,
-                texture: def.textures[faceKey],
+                texture: def.faces[faceKey],
                 normal: FACE_NORMALS[faceKey],
               };
             }

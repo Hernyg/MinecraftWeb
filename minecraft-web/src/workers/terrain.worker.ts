@@ -21,30 +21,47 @@ const heightAt = (x: number, z: number): number => {
   return Math.floor(Math.max(1, height));
 };
 
+const BLOCK = {
+  AIR: 0,
+  GRASS: 1,
+  DIRT: 2,
+  STONE: 3,
+  LOG: 4,
+  LEAVES: 5,
+  SAND: 8,
+  GRAVEL: 9,
+  WATER: 10,
+  BEDROCK: 11,
+} as const;
+
+const TREE_CHANCE = 0.012;
+const TREE_RADIUS = 2;
+
 const indexOf = (dims: ChunkDims, x: number, y: number, z: number): number => y + dims[1] * (x + dims[0] * z);
 
-const tryPlaceTree = (
+const surfaceBlockId = (height: number, worldX: number, worldZ: number): number => {
+  if (height <= SEA_LEVEL - 2) {
+    return BLOCK.SAND;
+  }
+  if (height <= SEA_LEVEL) {
+    return hash(worldX, worldZ, SEED + 4) > 0.45 ? BLOCK.SAND : BLOCK.GRAVEL;
+  }
+  if (height <= SEA_LEVEL + 2) {
+    return hash(worldX, worldZ, SEED + 5) > 0.7 ? BLOCK.GRAVEL : BLOCK.GRASS;
+  }
+  return BLOCK.GRASS;
+};
+
+const placeTree = (
   blocks: Uint16Array,
   dims: ChunkDims,
-  cx: number,
-  cz: number,
-  lx: number,
-  lz: number,
+  chunkMinX: number,
+  chunkMinZ: number,
   worldX: number,
   worldZ: number,
   surfaceY: number,
 ) => {
   const [sx, sy, sz] = dims;
-  const chance = hash(worldX, worldZ, SEED + 2);
-  if (chance > 0.015) {
-    return;
-  }
-
-  const baseIndex = indexOf(dims, lx, surfaceY, lz);
-  if (blocks[baseIndex] !== 1) {
-    return;
-  }
-
   const trunkBase = surfaceY + 1;
   if (trunkBase >= sy) {
     return;
@@ -57,36 +74,44 @@ const tryPlaceTree = (
     return;
   }
 
-  const radius = 2;
-  if (lx - radius < 0 || lx + radius >= sx || lz - radius < 0 || lz + radius >= sz) {
-    return;
+  const lx = worldX - chunkMinX;
+  const lz = worldZ - chunkMinZ;
+  if (lx >= 0 && lx < sx && lz >= 0 && lz < sz) {
+    for (let h = 0; h < trunkHeight; h += 1) {
+      const wy = trunkBase + h;
+      if (wy < 0 || wy >= sy) {
+        continue;
+      }
+      const idx = indexOf(dims, lx, wy, lz);
+      blocks[idx] = BLOCK.LOG;
+    }
   }
 
-  for (let h = 0; h < trunkHeight; h += 1) {
-    const y = trunkBase + h;
-    const idx = indexOf(dims, lx, y, lz);
-    blocks[idx] = 4;
-  }
-
-  const leafCenterY = trunkTop;
-  for (let dy = -radius; dy <= radius; dy += 1) {
-    for (let dx = -radius; dx <= radius; dx += 1) {
-      for (let dz = -radius; dz <= radius; dz += 1) {
-        if (dx * dx + dy * dy + dz * dz > radius * radius + 1) {
+  const centerY = trunkTop;
+  for (let dy = -TREE_RADIUS; dy <= TREE_RADIUS; dy += 1) {
+    for (let dx = -TREE_RADIUS; dx <= TREE_RADIUS; dx += 1) {
+      for (let dz = -TREE_RADIUS; dz <= TREE_RADIUS; dz += 1) {
+        if (dx === 0 && dy === 0 && dz === 0) {
           continue;
         }
-        const x = lx + dx;
-        const y = leafCenterY + dy;
-        const z = lz + dz;
-        if (x < 0 || x >= sx || y < 0 || y >= sy || z < 0 || z >= sz) {
+        if (dx * dx + dy * dy + dz * dz > TREE_RADIUS * TREE_RADIUS + 1) {
           continue;
         }
-        if (dx === 0 && dz === 0 && dy === 0) {
+        const wx = worldX + dx;
+        const wy = centerY + dy;
+        const wz = worldZ + dz;
+        if (wy < 0 || wy >= sy) {
           continue;
         }
-        const idx = indexOf(dims, x, y, z);
-        if (blocks[idx] === 0) {
-          blocks[idx] = 5;
+        if (wx < chunkMinX || wx >= chunkMinX + sx || wz < chunkMinZ || wz >= chunkMinZ + sz) {
+          continue;
+        }
+        const lxLeaf = wx - chunkMinX;
+        const lzLeaf = wz - chunkMinZ;
+        const idx = indexOf(dims, lxLeaf, wy, lzLeaf);
+        const existing = blocks[idx];
+        if (existing === BLOCK.AIR || existing === BLOCK.WATER) {
+          blocks[idx] = BLOCK.LEAVES;
         }
       }
     }
@@ -96,27 +121,56 @@ const tryPlaceTree = (
 const fillChunk = (cx: number, cz: number, dims: ChunkDims): Uint16Array => {
   const [sx, sy, sz] = dims;
   const blocks = new Uint16Array(sx * sy * sz);
+  const chunkMinX = cx * sx;
+  const chunkMinZ = cz * sz;
+  const chunkMaxX = chunkMinX + sx;
+  const chunkMaxZ = chunkMinZ + sz;
 
   for (let x = 0; x < sx; x += 1) {
     for (let z = 0; z < sz; z += 1) {
-      const worldX = cx * sx + x;
-      const worldZ = cz * sz + z;
-      const height = Math.min(sy - 1, heightAt(worldX, worldZ));
+      const worldX = chunkMinX + x;
+      const worldZ = chunkMinZ + z;
+      const columnHeight = Math.min(sy - 2, heightAt(worldX, worldZ));
+      const topBlock = surfaceBlockId(columnHeight, worldX, worldZ);
 
       for (let y = 0; y < sy; y += 1) {
         const idx = indexOf(dims, x, y, z);
-        if (y > height) {
-          blocks[idx] = 0;
-        } else if (y === height) {
-          blocks[idx] = 1;
-        } else if (y >= height - 3) {
-          blocks[idx] = 2;
+        if (y === 0) {
+          blocks[idx] = BLOCK.BEDROCK;
+          continue;
+        }
+        if (y > columnHeight) {
+          blocks[idx] = y <= SEA_LEVEL ? BLOCK.WATER : BLOCK.AIR;
+          continue;
+        }
+        if (y === columnHeight) {
+          blocks[idx] = topBlock;
+          continue;
+        }
+        if (columnHeight - y <= 3) {
+          if (topBlock === BLOCK.SAND || topBlock === BLOCK.GRAVEL) {
+            blocks[idx] = topBlock;
+          } else {
+            blocks[idx] = BLOCK.DIRT;
+          }
         } else {
-          blocks[idx] = 3;
+          blocks[idx] = BLOCK.STONE;
         }
       }
+    }
+  }
 
-      tryPlaceTree(blocks, dims, cx, cz, x, z, worldX, worldZ, height);
+  for (let worldX = chunkMinX - TREE_RADIUS; worldX < chunkMaxX + TREE_RADIUS; worldX += 1) {
+    for (let worldZ = chunkMinZ - TREE_RADIUS; worldZ < chunkMaxZ + TREE_RADIUS; worldZ += 1) {
+      if (hash(worldX, worldZ, SEED + 2) > TREE_CHANCE) {
+        continue;
+      }
+      const columnHeight = Math.min(sy - 2, heightAt(worldX, worldZ));
+      const topBlock = surfaceBlockId(columnHeight, worldX, worldZ);
+      if (topBlock !== BLOCK.GRASS) {
+        continue;
+      }
+      placeTree(blocks, dims, chunkMinX, chunkMinZ, worldX, worldZ, columnHeight);
     }
   }
 

@@ -1,10 +1,11 @@
 import "./hud.css";
-import { placeableIds } from "../data/blocks";
+import { BlockById, placeableIds } from "../data/blocks";
 
 export interface HUD {
   update(time: number, delta: number): void;
   setSelectedBlock(id: number): void;
   setTargetBlock(id: number | null): void;
+  showPreventQuitMessage(): void;
 }
 
 export const initHUD = (): HUD => {
@@ -30,16 +31,22 @@ export const initHUD = (): HUD => {
   const slots = placeableIds.map((id, index) => {
     const slot = document.createElement("div");
     slot.className = "hud-hotbar-slot";
-    slot.textContent = `${index + 1}:${id}`;
+    const def = BlockById.get(id);
+    slot.textContent = `${index + 1}: ${def?.name ?? id}`;
     hotbar.appendChild(slot);
     return slot;
   });
   root.appendChild(hotbar);
 
+  const toast = document.createElement("div");
+  toast.className = "hud-toast";
+  root.appendChild(toast);
+
   document.body.appendChild(root);
 
   let lastUpdate = performance.now();
   let currentSelected = placeableIds[0];
+  let toastTimer: number | null = null;
 
   const refreshHotbar = () => {
     slots.forEach((slot, idx) => {
@@ -65,7 +72,23 @@ export const initHUD = (): HUD => {
       refreshHotbar();
     },
     setTargetBlock(id: number | null) {
-      blockLine.textContent = id != null ? `Target: ${id}` : "Target: --";
+      if (id != null) {
+        const def = BlockById.get(id);
+        blockLine.textContent = `Target: ${def?.name ?? id}`;
+      } else {
+        blockLine.textContent = "Target: --";
+      }
+    },
+    showPreventQuitMessage() {
+      toast.textContent = "Ctrl+W prevented";
+      toast.classList.add("visible");
+      if (toastTimer !== null) {
+        window.clearTimeout(toastTimer);
+      }
+      toastTimer = window.setTimeout(() => {
+        toast.classList.remove("visible");
+        toastTimer = null;
+      }, 1500);
     },
   };
 };

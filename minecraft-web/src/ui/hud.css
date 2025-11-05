@@ -38,7 +38,7 @@
 .hud-hotbar-slot {
   padding: 4px 6px;
   border: 1px solid rgba(255, 255, 255, 0.4);
-  min-width: 28px;
+  min-width: 60px;
   text-align: center;
   border-radius: 2px;
   opacity: 0.6;
@@ -46,5 +46,22 @@
 
 .hud-hotbar-slot.active {
   border-color: #fff;
+  opacity: 1;
+}
+
+.hud-toast {
+  position: absolute;
+  bottom: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.6);
+  padding: 6px 10px;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.hud-toast.visible {
   opacity: 1;
 }
