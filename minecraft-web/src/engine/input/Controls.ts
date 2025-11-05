@@ -1,11 +1,4 @@
-import {
-  addScaledVec3,
-  createVec3,
-  normalizeVec3,
-  setVec3,
-  zeroVec3,
-  type Vec3,
-} from "../utils/Vec3";
+import { createVec3, zeroVec3, type Vec3 } from "../utils/Vec3";
 import { PointerLock } from "./PointerLock";
 import { placeableIds } from "../../data/blocks";
 
@@ -14,24 +7,34 @@ export interface PlayerState {
   velocity: Vec3;
   yaw: number;
   pitch: number;
+  eyeHeight: number;
+  flying: boolean;
+  onGround: boolean;
+}
+
+interface ControlsOptions {
+  onPreventQuit?: () => void;
 }
 
 export class Controls {
   private readonly keys = new Set<string>();
   private readonly lookSensitivity = 0.0025;
-  private readonly speed = 10;
   private readonly moveVector = createVec3();
-  private readonly forward = createVec3();
-  private readonly right = createVec3();
-  private readonly direction = createVec3();
   private readonly removeMoveHandler: () => void;
   private readonly removeLockHandler: () => void;
   private breakRequested = false;
   private placeRequested = false;
   private selectedIndex = 0;
   private placeHeld = false;
+  private jumpRequested = false;
+  private lastSpacePress = 0;
+  private readonly flyToggleWindowMs = 300;
 
-  constructor(private readonly pointerLock: PointerLock, private readonly state: PlayerState) {
+  constructor(
+    private readonly pointerLock: PointerLock,
+    private readonly state: PlayerState,
+    private readonly options: ControlsOptions = {},
+  ) {
     window.addEventListener("keydown", this.handleKeyDown);
     window.addEventListener("keyup", this.handleKeyUp);
     document.addEventListener("mousedown", this.handleMouseDown);
@@ -51,45 +54,48 @@ export class Controls {
     this.removeLockHandler();
   }
 
-  update(delta: number): void {
+  update(_delta: number): void {
     zeroVec3(this.moveVector);
 
     if (this.keys.has("KeyW")) this.moveVector.z -= 1;
     if (this.keys.has("KeyS")) this.moveVector.z += 1;
     if (this.keys.has("KeyA")) this.moveVector.x -= 1;
     if (this.keys.has("KeyD")) this.moveVector.x += 1;
-    if (this.keys.has("Space")) this.moveVector.y += 1;
-    if (this.keys.has("ShiftLeft") || this.keys.has("ControlLeft")) this.moveVector.y -= 1;
 
-    if (this.moveVector.x !== 0 || this.moveVector.y !== 0 || this.moveVector.z !== 0) {
-      normalizeVec3(this.moveVector);
+    const horizontalLength = Math.hypot(this.moveVector.x, this.moveVector.z);
+    if (horizontalLength > 1e-5) {
+      const inv = 1 / Math.max(1, horizontalLength);
+      this.moveVector.x *= inv;
+      this.moveVector.z *= inv;
+    }
 
-      setVec3(this.forward, Math.sin(this.state.yaw), 0, Math.cos(this.state.yaw));
-      setVec3(this.right, Math.cos(this.state.yaw), 0, -Math.sin(this.state.yaw));
-
-      setVec3(
-        this.direction,
-        this.forward.x * this.moveVector.z + this.right.x * this.moveVector.x,
-        this.moveVector.y,
-        this.forward.z * this.moveVector.z + this.right.z * this.moveVector.x,
-      );
-      normalizeVec3(this.direction);
-
-      const distance = this.speed * delta;
-      addScaledVec3(this.state.position, this.direction, distance);
-      setVec3(
-        this.state.velocity,
-        this.direction.x * this.speed,
-        this.direction.y * this.speed,
-        this.direction.z * this.speed,
-      );
+    if (this.state.flying) {
+      if (this.keys.has("Space")) this.moveVector.y += 1;
+      if (this.keys.has("ShiftLeft") || this.keys.has("ControlLeft") || this.keys.has("ControlRight")) {
+        this.moveVector.y -= 1;
+      }
+      if (Math.abs(this.moveVector.y) > 1) {
+        this.moveVector.y = Math.sign(this.moveVector.y);
+      }
     } else {
-      setVec3(this.state.velocity, 0, 0, 0);
+      this.moveVector.y = 0;
     }
   }
 
   getState(): PlayerState {
     return this.state;
+  }
+
+  getMovementInput(): Vec3 {
+    return this.moveVector;
+  }
+
+  consumeJumpRequest(): boolean {
+    if (this.jumpRequested) {
+      this.jumpRequested = false;
+      return true;
+    }
+    return false;
   }
 
   consumeBreakRequest(): boolean {
@@ -117,10 +123,38 @@ export class Controls {
   }
 
   private readonly handleKeyDown = (event: KeyboardEvent) => {
+    if ((event.ctrlKey || event.metaKey) && event.code === "KeyW") {
+      if (this.pointerLock.isLocked()) {
+        event.preventDefault();
+        this.options.onPreventQuit?.();
+        return;
+      }
+    }
+
     if (event.code.startsWith("Digit")) {
       const slot = Number.parseInt(event.code.slice(5), 10) - 1;
       if (!Number.isNaN(slot) && slot >= 0 && slot < placeableIds.length) {
         this.selectedIndex = slot;
+      }
+    }
+    if (event.code === "Space" && event.repeat) {
+      return;
+    }
+
+    if (event.code === "Space") {
+      const now = performance.now();
+      if (now - this.lastSpacePress < this.flyToggleWindowMs) {
+        this.state.flying = !this.state.flying;
+        this.state.velocity.y = 0;
+        if (this.state.flying) {
+          this.state.onGround = false;
+        }
+        this.lastSpacePress = 0;
+      } else {
+        this.lastSpacePress = now;
+        if (!this.state.flying) {
+          this.jumpRequested = true;
+        }
       }
     }
     this.keys.add(event.code);
@@ -151,6 +185,9 @@ export class Controls {
   private readonly handleLockChange = (locked: boolean) => {
     if (!locked) {
       this.placeHeld = false;
+      this.jumpRequested = false;
+      this.keys.clear();
+      this.lastSpacePress = 0;
     }
   };
 

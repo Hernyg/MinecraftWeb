@@ -26,13 +26,23 @@ const loadAtlasTexture = async (): Promise<Texture> => {
 
 export const getAtlasMaterial = async (): Promise<MeshStandardMaterial> => {
   if (!atlasMaterialPromise) {
-    atlasMaterialPromise = loadAtlasTexture().then(
-      (texture) =>
-        new MeshStandardMaterial({
-          map: texture,
-          vertexColors: false,
-        }),
-    );
+    atlasMaterialPromise = loadAtlasTexture().then((texture) => {
+      const material = new MeshStandardMaterial({
+        map: texture,
+        vertexColors: false,
+      });
+      const configured = material as MeshStandardMaterial & {
+        transparent: boolean;
+        alphaTest: number;
+        metalness: number;
+        roughness: number;
+      };
+      configured.transparent = true;
+      configured.alphaTest = 0.2;
+      configured.metalness = 0;
+      configured.roughness = 1;
+      return configured;
+    });
   }
   return atlasMaterialPromise;
 };

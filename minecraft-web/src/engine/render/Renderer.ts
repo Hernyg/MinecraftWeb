@@ -103,7 +103,7 @@ export class Renderer {
   }
 
   renderFrame(world: World, player: PlayerState, now: number): void {
-    this.camera.position.set(player.position.x, player.position.y, player.position.z);
+    this.camera.position.set(player.position.x, player.position.y + player.eyeHeight, player.position.z);
     this.camera.rotation.x = player.pitch;
     this.camera.rotation.y = player.yaw;
 
